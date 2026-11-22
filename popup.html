@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+        integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>GSC - Bulk Removals</title>
+    <style>
+        body {
+            width: 600px;
+            font-size: 0.82rem;
+            user-select: none;
+        }
+
+        textarea {
+            user-select: text;
+        }
+
+        .table-container {
+            max-height: 190px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 4px;
+        }
+
+        .table-container thead th {
+            position: sticky;
+            top: 0;
+            background-color: #212529;
+            z-index: 2;
+        }
+
+        .url-cell {
+            max-width: 190px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+
+<body class="bg-dark text-light p-2">
+    <div class="container-fluid px-1">
+        <!-- Header -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="fw-bold m-0 text-warning">
+                    <i class="fa-solid fa-trash-can"></i> Bulk Removals⚡
+                </h5>
+                <span class="badge bg-secondary" style="font-size: 0.65rem;">v1.1</span>
+                <span class="badge bg-success" style="font-size: 0.65rem;" title="Tool tiếp tục chạy kể cả khi đóng popup">
+                    <i class="fa-solid fa-shield-halved"></i> Chạy ngầm
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <span class="text-secondary" style="font-size: 0.8rem;">Delay:</span>
+                <div class="input-group input-group-sm" style="width: 6.8rem;">
+                    <button id="delay-minus" class="btn btn-outline-secondary text-light py-0 px-2" type="button" title="Giảm 0.05s" style="border-color: #555;">−</button>
+                    <input id="delay" type="number" min="0.75" max="1.5" step="0.05" value="0.75"
+                        class="form-control form-control-sm text-center bg-secondary text-light border-0 px-1 fw-bold"
+                        title="Khoảng nghỉ giữa các URLs (0.75s - 1.5s)" style="font-size: 0.85rem;" />
+                    <button id="delay-plus" class="btn btn-outline-secondary text-light py-0 px-2" type="button" title="Tăng 0.05s" style="border-color: #555;">+</button>
+                </div>
+                <span class="text-secondary" style="font-size: 0.8rem;">(s)</span>
+            </div>
+        </div>
+
+        <!-- Options -->
+        <div class="d-flex align-items-center gap-3 mb-1 flex-wrap">
+            <div class="form-check m-0">
+                <input class="form-check-input" type="radio" checked name="follow-type" id="exact-url">
+                <label class="form-check-label" for="exact-url">Chỉ xóa URL này</label>
+            </div>
+            <div class="form-check m-0">
+                <input class="form-check-input" type="radio" name="follow-type" id="prefix-url">
+                <label class="form-check-label" for="prefix-url">Xóa URL có tiền tố này</label>
+            </div>
+            <div class="form-check m-0">
+                <input class="form-check-input" type="radio" name="follow-type" id="cancel-only">
+                <label class="form-check-label text-info fw-bold" for="cancel-only" style="cursor: pointer;">
+                    <i class="fa-solid fa-ban"></i> Hủy yêu cầu (Cancel request)
+                </label>
+            </div>
+        </div>
+
+        <!-- Cancel duplicate if processing or temporarily removed option -->
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="cancel-dup-if-temp" style="cursor: pointer;">
+            <label class="form-check-label text-warning" for="cancel-dup-if-temp" style="font-size: 0.74rem; cursor: pointer;">
+                <i class="fa-solid fa-arrow-rotate-left"></i> Tự động <strong>Cancel request</strong> nếu trùng lặp (đang <em>Processing request</em> hoặc <em>Temporarily removed</em>)
+            </label>
+        </div>
+
+        <!-- URLs Textarea -->
+        <div class="mb-2">
+            <textarea id="urlList" class="form-control form-control-sm bg-dark text-light border-secondary"
+                style="font-size: 0.75rem; font-family: monospace;" placeholder="Nhập danh sách URLs cần xóa (mỗi dòng 1 URL)..."
+                rows="5"></textarea>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="alert border-secondary py-1 px-2 mb-2 d-flex align-items-center justify-content-between"
+            style="min-height: 28px;">
+            <div id="detailFocus" class="text-truncate text-info" style="font-size: 0.78rem;">
+                👇 Nhập URLs và nhấn Bắt đầu (hỗ trợ đóng popup vẫn chạy ngầm)
+            </div>
+        </div>
+
+        <!-- Controls & Counters -->
+        <div class="row align-items-center g-2 mb-3">
+            <div class="col-6">
+                <div class="d-flex align-items-center gap-1">
+                    <button id="removeUrls" type="button" class="btn btn-danger btn-sm fw-bold">
+                        <i class="fa-solid fa-play"></i> Bắt đầu
+                    </button>
+                    <button id="pauseButton" type="button" class="btn btn-warning btn-sm fw-bold" style="display: none;">
+                        <i class="fa-solid fa-pause"></i> Tạm dừng
+                    </button>
+                    <button id="resumeButton" type="button" class="btn btn-success btn-sm fw-bold" style="display: none;">
+                        <i class="fa-solid fa-play"></i> Tiếp tục
+                    </button>
+                    <button id="stopButton" type="button" class="btn btn-outline-danger btn-sm fw-bold" style="display: none;">
+                        <i class="fa-solid fa-stop"></i> Dừng hẳn
+                    </button>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="d-flex justify-content-end gap-3 text-center" style="font-size: 0.8rem;">
+                    <div title="Tổng số URLs">
+                        <i class="fa-solid fa-layer-group text-light"></i>
+                        <span id="total-url" class="fw-bold ms-1">0</span>
+                    </div>
+                    <div title="Thành công" style="color: #20c997">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span id="done-url" class="fw-bold ms-1">0</span>
+                    </div>
+                    <div title="Trùng lặp" class="text-warning">
+                        <i class="fa-solid fa-clone"></i>
+                        <span id="duplicate-url" class="fw-bold ms-1">0</span>
+                    </div>
+                    <div title="Lỗi" class="text-danger">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <span id="error-url" class="fw-bold ms-1">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Table Section -->
+        <div class="border-top border-secondary pt-2">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="fw-bold text-light">
+                    <i class="fa-solid fa-table-list text-primary"></i> Kết quả xử lý (<span id="log-count">0</span>)
+                </span>
+                <div class="d-flex gap-1">
+                    <button id="copySheetBtn" type="button" class="btn btn-success btn-sm py-0 px-2 fw-bold"
+                        style="font-size: 0.75rem;" title="Copy định dạng chuẩn dán vào Google Sheets">
+                        <i class="fa-solid fa-copy"></i> Copy bảng kết quả
+                    </button>
+                    <button id="clearLogBtn" type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                        style="font-size: 0.75rem;" title="Xóa toàn bộ lịch sử bảng kết quả">
+                        <i class="fa-solid fa-trash-can"></i> Xóa
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="table table-dark table-sm table-hover mb-0" style="font-size: 0.72rem;">
+                    <thead>
+                        <tr>
+                            <th style="width: 35px;" class="text-center">#</th>
+                            <th style="width: 125px;">Thời gian</th>
+                            <th>URL</th>
+                            <th style="width: 85px;" class="text-center">Trạng thái</th>
+                            <th style="width: 140px;">Chi tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logTableBody">
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">Chưa có kết quả xử lý nào</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>

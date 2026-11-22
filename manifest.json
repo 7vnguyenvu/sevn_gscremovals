@@ -1,0 +1,24 @@
+{
+    "manifest_version": 3,
+    "name": "GSC - Bulk Removals",
+    "version": "1.1",
+    "description": "Bulk URL removals tool for Google Search Console with background execution and Google Sheets export.",
+    "icons": {
+        "512": "trash.png"
+    },
+    "permissions": [
+        "activeTab",
+        "scripting",
+        "storage",
+        "tabs"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "host_permissions": [
+        "https://search.google.com/*"
+    ]
+}
